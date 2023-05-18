@@ -275,6 +275,40 @@ void rr_iteration_deque_to_deque(deque<Process> &cur_queue, map<int, queue<Proce
       }
 }
 
+// Helper function for MLFQ scheduling function, Q2
+// Supports one iteration of round robin 
+void rr_iteration_deque_to_pqueue_duration(deque<Process> &cur_queue, map<int, queue<Process>> &cur_relieving_jobs, pqueue_duration &lower_queue, int lower_queue_timeslot, int &timer, list<Process> &complete){
+      Process cur_process = cur_queue.front();              // Get next process in queue to run
+      cur_queue.pop_front();
+
+      if(cur_process.first_run == -1){                      // Set first_run if job hasn't been run yet
+        cur_process.first_run = timer;
+      }
+
+      timer++;                                              // Increment timer by one, update job's time allotment at current level, duration and amount_run
+      cur_process.time_allotment_at_level -= 1;
+      cur_process.duration -= 1;
+      cur_process.amount_run++;
+                                                            // Check if 1. job is now finished or 2. job has used up time slot at current level or 3. job is relieving the CPU at this time
+      if(cur_process.duration == 0){                        // If job is now completed, set completion time to current time and add completed job to end of ordered list of jobs that have completed running
+        cur_process.completion = timer;
+        complete.push_back(cur_process);
+      } else if(cur_process.interactivity.count(cur_process.amount_run)){                                   // If job now relieves CPU, add job to cur_relieving_jobs map with key = time job ready to run again, value = queue containing the process itself
+        if(cur_relieving_jobs[cur_process.interactivity[cur_process.amount_run] + timer].size() == 0){        
+          queue<Process> val;
+          val.push(cur_process);
+          cur_relieving_jobs[cur_process.interactivity[cur_process.amount_run] + timer] = val;
+        } else{                                                                                                    // If multiple jobs already use key = time job ready to run again, push job to end of value queue at that key
+          cur_relieving_jobs[cur_process.interactivity[cur_process.amount_run] + timer].push(cur_process);
+        }
+      } else if(cur_process.duration != 0 && cur_process.time_allotment_at_level == 0){                   // If job not complete, but used up timeslot at current level, set timeslot as lower_queue's timeslot and push job to lowerqueue 
+        cur_process.time_allotment_at_level = lower_queue_timeslot;                                   
+        lower_queue.push(cur_process);
+      } else if(cur_process.duration != 0 && cur_process.time_allotment_at_level != 0){                    // If job not complete, but did not use up timeslot, push job back to front of curqueue since timeslot not used up yet
+        cur_queue.push_front(cur_process);
+      }
+}
+
 // Helper function for MLFQ scheduling function
 // Supports boosting jobs from Q2 to Q1 
 void boost_from_lower_deque(deque<Process> &lowerq, deque<Process> &higherq, int higherq_timeslot){
@@ -317,7 +351,7 @@ void add_jobs_ready_to_return_after_relieving_CPU_pqueue(map<int, queue<Process>
     queue<Process> processes_to_add_back = relieving_jobs_list[timer];
     relieving_jobs_list.erase(timer);
     while (!processes_to_add_back.empty()) {
-      level_queue.push_back(processes_to_add_back.front());
+      level_queue.push(processes_to_add_back.front());
       processes_to_add_back.pop();
     }
   }
@@ -442,7 +476,7 @@ list<Process> mlfq(pqueue_arrival workload) {           // scheduling with Multi
       } else if(cur_job_Q4.duration != 0){                                                                // job not complete
         Q4_has_job_to_continue = true;
       }
-    } else{
+    } else{                                   // If no jobs to run on all level queues, increment timer
       timer++;
     }
 
