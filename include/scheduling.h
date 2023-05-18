@@ -12,9 +12,9 @@ struct Process {
   int first_run;
   int duration;
   int completion;
-  map<int, int> interactivity;
-  int amount_run;
-  int time_allotment_at_level;
+  map<int, int> interactivity;      // added map to store interactivity of a process, key is time process relieves CPU and value is amount of time process relieves CPU for
+  int amount_run;                   // added amount_run of a process
+  int time_allotment_at_level;      // added int of time a process has used up at specific level
 };
 
 class ArrivalComparator {

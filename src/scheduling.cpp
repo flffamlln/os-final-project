@@ -11,14 +11,11 @@
 using namespace std;
 
 pqueue_arrival read_workload(string filename) {
-  // open filename
-  // for each line in file, create a process
-  // now push into pqueue
   pqueue_arrival workload;
 
-  ifstream MyReadFile(filename);
+  ifstream MyReadFile(filename);                // open workload file
   string myText;
-  while (getline (MyReadFile, myText)) {
+  while (getline (MyReadFile, myText)) {        // for each line in file, create a process
     char *p;
     char *cstr = new char[myText.length() + 1];
     strcpy(cstr, myText.c_str());
@@ -28,43 +25,42 @@ pqueue_arrival read_workload(string filename) {
     p = strtok(cstr, " ");
     int x;
     sscanf(p, "%d", &x);
-    item.arrival = x;
+    item.arrival = x;                         // initialize struct fields of process
     item.first_run = -1;
     item.completion = -1;
     item.amount_run = 0;
-    item.time_allotment_at_level = 0;
-
-    // add interactivity map to each process
-    int count = 1;
+    item.time_allotment_at_level = 0;         // set time process spent on specific level to 0
+                                              // add interactivity map to each process
+    int count = 1;                            // set count to 0 (will use this to add in duration, key and value pairs to map)
     int key;
     int value;
 
     while(p != NULL){
       p = strtok(NULL, " ");
-      if(p != NULL && count == 1){
+      if(p != NULL && count == 1){            // if reading number after first_run, set this number as the process's duration 
         sscanf(p, "%d", &x);
         item.duration = x;
-      } else if(p != NULL && count % 2 == 0){
+      } else if(p != NULL && count % 2 == 0){     // if reading key, add key into interactivity map, intialize value to temporary value -1 
         sscanf(p, "%d", &key);
         item.interactivity[key] = -1;
-      } else if(p != NULL && count % 2 != 0){
+      } else if(p != NULL && count % 2 != 0){     // if reading value, set key's value to value from workload
         sscanf(p, "%d", &value);
         item.interactivity[key] = value;
-      }
-      count++;
+      } 
+      count++;                                // increment count for if there are more key value pairs to store in interactivity map
     }
 
-    workload.push(item);
+    workload.push(item);                    // push process into pqueue
   }
 
-  MyReadFile.close();
+  MyReadFile.close();                       // close workload file
 
   show_workload(workload);
 
   return workload;
 }
 
-void show_workload(pqueue_arrival workload) {
+void show_workload(pqueue_arrival workload) {     // given function in starter code
   pqueue_arrival xs = workload;
   cout << "Workload:" << endl;
   while (!xs.empty()) {
@@ -74,7 +70,7 @@ void show_workload(pqueue_arrival workload) {
   }
 }
 
-void show_processes(list<Process> processes) {
+void show_processes(list<Process> processes) {    // given function in starter code
   list<Process> xs = processes;
   cout << "Processes:" << endl;
   while (!xs.empty()) {
@@ -86,165 +82,161 @@ void show_processes(list<Process> processes) {
   }
 }
 
-list<Process> fifo(pqueue_arrival workload) {
+list<Process> fifo(pqueue_arrival workload) {     // scheduling with first in first out 
   list<Process> ordered;
-  int timer = 0;
+  int timer = 0;          // initialize timer to 0
 
   while(true){
-    if(workload.size() == 0){
+    if(workload.size() == 0){         // if there are no more jobs to run, break out of while loop
       break;
     }
 
-    Process cur = workload.top();
+    Process cur = workload.top();    // since there is at least 1 job still left to run, take the next job from top of pqueue_arrival workload
     workload.pop();
 
-    if(cur.arrival <= timer){
+    if(cur.arrival <= timer){         // if job arrived before current time, first_run of process is current time
       cur.first_run = timer;
     } else{
-      cur.first_run = cur.arrival;
+      cur.first_run = cur.arrival;    // if job arrives in the future, first_run of process is arrival time and fast forward timer to arrival time
       timer = cur.arrival;
     }
 
-    timer += cur.duration;
-    cur.completion = timer;
+    timer += cur.duration;            // increment timer by duration of job
+    cur.completion = timer;           // set job's completion time to timer
 
-    ordered.push_back(cur);
+    ordered.push_back(cur);           // add completed job to end of ordered list of jobs
   }
 
-  return ordered;
+  return ordered;     // return list of completed processes ordered by completion time
 }
 
-list<Process> sjf(pqueue_arrival workload) {
+list<Process> sjf(pqueue_arrival workload) {        // scheduling with shortest job first
   list<Process> ordered;
-  int timer = 0;
+  int timer = 0;                    // initialize timer to 0
   pqueue_duration subgroup;
 
   while(true){
-    if(workload.size() == 0 && subgroup.size() == 0){
+    if(workload.size() == 0 && subgroup.size() == 0){       // if there are no jobs to run in workload and subgroup, break out of while loop
       break;
     }
 
-    while(workload.size() != 0 && workload.top().arrival <= timer){
-      subgroup.push(workload.top());
+    while(workload.size() != 0 && workload.top().arrival <= timer){     // take all jobs from workload that have arrived by current time and push themm into subgroup
+      subgroup.push(workload.top());                                    // since subgroup is of type pqueue_duration, jobs in subgroup ordered by shortest duration time
+      workload.pop();                                                    
+    }
+
+    if(subgroup.size() == 0){                                // if subgroup has no jobs (aka no jobs to run that have arrived already), increment timer and check if jobs arrived again
+      timer++;  
+      continue;
+    }
+
+    Process cur = subgroup.top();           // if job that is not completed yet has already arrived, take it out of subgroup
+    subgroup.pop();
+
+    cur.first_run = timer;                  // set first_run of process to current time
+
+    timer += cur.duration;                  // increment timer by length of job
+
+    cur.completion = timer;                 // set completion time of job as current time
+
+    ordered.push_back(cur);                 //  add completed job to end of ordered list of jobs that have completed running
+  }
+
+  return ordered;       // return list of completed processes ordered by completion time
+}
+
+
+list<Process> stcf(pqueue_arrival workload) {   // scheduling with shortest time to completion first
+  list<Process> ordered;
+  int timer = 0;                                 // initialize timer to 0
+  pqueue_duration subgroup;
+
+  while(true){
+    if(workload.size() == 0 && subgroup.size() == 0){          // if there are no jobs to run in workload and subgroup, break out of while loop
+      break;
+    }
+
+    while(workload.size() != 0 && workload.top().arrival <= timer){      // take all jobs from workload that have arrived by current time and push themm into subgroup
+      subgroup.push(workload.top());                                    // since subgroup is of type pqueue_duration, jobs in subgroup ordered by shortest duration time
       workload.pop();
     }
 
-    if(subgroup.size() == 0){
+    if(subgroup.size() == 0){           // if subgroup has no jobs (aka no jobs to run that have arrived already), increment timer and check if jobs arrived again
       timer++;
       continue;
     }
 
-    Process cur = subgroup.top();
+    Process cur = subgroup.top();       // if job that is not completed yet has already arrived, take it out of subgroup
     subgroup.pop();
 
-    cur.first_run = timer;
-
-    timer += cur.duration;
-
-    cur.completion = timer;
-
-    ordered.push_back(cur);
-  }
-
-  return ordered;
-}
-
-
-list<Process> stcf(pqueue_arrival workload) {
-  list<Process> ordered;
-  int timer = 0;
-  pqueue_duration subgroup;
-
-  while(true){
-    if(workload.size() == 0 && subgroup.size() == 0){
-      break;
-    }
-
-    while(workload.size() != 0 && workload.top().arrival <= timer){
-      subgroup.push(workload.top());
-      workload.pop();
-    }
-
-    if(subgroup.size() == 0){
-      timer++;
-      continue;
-    }
-
-    Process cur = subgroup.top();
-    subgroup.pop();
-
-    if(cur.first_run == -1){
+    if(cur.first_run == -1){            // if job has not yet been run before, set first_run time to current time
       cur.first_run = timer;
     }
 
-    cur.duration -= 1;
+    cur.duration -= 1;                 // decrement job duration by 1, increment timer by 1
     timer++;
 
-    if(cur.duration <= 0){
-      cur.completion = timer + cur.duration;
-      cur.duration = 0;
-      ordered.push_back(cur);
+    if(cur.duration == 0){                      // if job has completed running, set completion time to current time
+      cur.completion = timer;
+      ordered.push_back(cur);          //  add completed job to end of ordered list of jobs that have completed running
     } else{
-      subgroup.push(cur);
+      subgroup.push(cur);              // if job has not finished running, push back to subgroup of jobs that can be run next job
     }
   }
 
-  return ordered;
+  return ordered;       // return list of completed processes ordered by completion time
 }
 
-list<Process> rr(pqueue_arrival workload) {
-  queue<Process> subgroup;
+list<Process> rr(pqueue_arrival workload) {     // scheduling with round robin
+  queue<Process> subgroup;    
   list<Process> ordered;
-  int timer = 0;
+  int timer = 0;                  // initialize timer to 0
 
-  if(workload.size() != 0){
+  if(workload.size() != 0){               // set timer to arrival time of first job to arrive
     timer = workload.top().arrival;
   }
 
-  while(workload.size() != 0 && workload.top().arrival <= timer){
-    subgroup.push(workload.top());
+  while(workload.size() != 0 && workload.top().arrival <= timer){       // take all jobs from workload that have arrived by current time and push themm into subgroup
+    subgroup.push(workload.top());                        
     workload.pop();
   }
 
-  while(workload.size() != 0 || subgroup.size() != 0){
-    if(subgroup.size() == 0){
-      timer = workload.top().arrival;
-      while(workload.size() != 0 && workload.top().arrival <= timer){
+  while(workload.size() != 0 || subgroup.size() != 0){          // while there is a job that has not completed running yet, keep running algorithm
+    if(subgroup.size() == 0){                                                    // if there are no jobs that have already arrived by current time that have yet to complete running
+      timer = workload.top().arrival;                                            // set timer to arrival time of next job to arrive
+      while(workload.size() != 0 && workload.top().arrival <= timer){  // take all jobs from workload that have arrived by current time and push themm into subgroup
         subgroup.push(workload.top());
         workload.pop();
       }
     }
 
-    Process cur = subgroup.front();
+    Process cur = subgroup.front();     // take next job from queue of jobs that are ready to run
     subgroup.pop();
 
-    // set first_run
-    if(cur.first_run == -1){
+    if(cur.first_run == -1){        // if job has not yet been run before, set first_run time to current time
       cur.first_run = timer;
     }
 
-    timer++;
-    cur.duration -= 1;
+    timer++;                        
+    cur.duration -= 1;                // decrement job duration by 1, increment timer by 1
 
-    if(cur.duration <= 0){
-      cur.completion = timer + cur.duration;
-      cur.duration = 0;
-      // add to ordered
-
-      ordered.push_back(cur);
+    if(cur.duration == 0){                  // if job has completed running, set completion time to current time
+      cur.completion = timer;
+      ordered.push_back(cur);               //  add completed job to end of ordered list of jobs that have completed running
     } else{
-      subgroup.push(cur);
+      subgroup.push(cur);              // if job has not finished running, push back to subgroup of jobs that can be run next job
     }
 
-    while(workload.size() != 0 && workload.top().arrival <= timer){
+    while(workload.size() != 0 && workload.top().arrival <= timer){     // take all jobs from workload that have arrived by current time and push themm into subgroup
         subgroup.push(workload.top());
         workload.pop();
     }
   }
 
-  return ordered;
+  return ordered;       // return list of completed processes ordered by completion time
 }
 
+// one iteration of round robin
 void rr_iteration(deque<Process> &cur_queue, map<int, queue<Process>> &cur_relieving_jobs, deque<Process> &lower_queue, int lower_queue_timeslot, int &timer, list<Process> &complete){
       // 3a. Get top process in queue to run
       Process cur_process = cur_queue.front();
