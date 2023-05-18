@@ -530,8 +530,7 @@ list<Process> mlfq(pqueue_arrival workload) {
 }
 
 
-
-float avg_turnaround(list<Process> processes) {
+float avg_turnaround(list<Process> processes) {     // return avg turnaround time given list of completed processes
   int sum = 0;
   int div = 0;
   for(auto i: processes){
@@ -542,7 +541,7 @@ float avg_turnaround(list<Process> processes) {
   return float(sum) / float(div);
 }
 
-float avg_response(list<Process> processes) {
+float avg_response(list<Process> processes) {     // returns avg response time given list of completed processes
   int sum = 0;
   int div = 0;
   for(auto i: processes){
@@ -553,7 +552,7 @@ float avg_response(list<Process> processes) {
   return float(sum) / float(div);
 }
 
-void show_metrics(list<Process> processes) {
+void show_metrics(list<Process> processes) {      // given function in starter code
   float avg_t = avg_turnaround(processes);
   float avg_r = avg_response(processes);
   show_processes(processes);
