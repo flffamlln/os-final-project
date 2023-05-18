@@ -38,4 +38,4 @@ For readability, I made sure to add documentation comments to all functions so t
 
 # 10 minute video presentation (slides + demo)
 - Slides: https://docs.google.com/presentation/d/17IEke12o6kqey0v7HyLGuVI0n6DXIbB7WXmTLIpN7T8/edit?usp=sharing 
-- Demo: 
+- Demo: https://drive.google.com/file/d/1JTfZ6dWCPu9wBf2VFVAV8f8Z-lbizXNL/view
