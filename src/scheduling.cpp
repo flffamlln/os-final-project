@@ -309,6 +309,88 @@ void rr_iteration_deque_to_pqueue_duration(deque<Process> &cur_queue, map<int, q
       }
 }
 
+// Helper function for MLFQ scheduling function, Q3
+// Supports one iteration of SJF 
+void sjf_iteration_pqueue_duration_to_pqueue_duration(pqueue_duration &q3, pqueue_duration &q4, bool &Q3_has_job_to_continue, Process &cur_job_Q3, map<int, queue<Process>> &q3_relieving_jobs, int &timer, list<Process> &complete, int &q4_timeslot){
+        // Get top process in queue to run
+        if(!Q3_has_job_to_continue){
+          cur_job_Q3 = q3.top();
+          q3.pop();
+        }
+
+        // Set first_run if applicable
+        if(cur_job_Q3.first_run == -1){
+          cur_job_Q3.first_run = timer;
+        }
+
+        // Update timer, time allotment at level, duration and amount_run
+        timer++;
+        cur_job_Q3.time_allotment_at_level -= 1;
+        cur_job_Q3.duration -= 1;
+        cur_job_Q3.amount_run++;
+
+        // Check if job finished / used up time slot / relieves CPU
+        if(cur_job_Q3.duration == 0){                                                                       // job finished
+          cur_job_Q3.completion = timer;
+          complete.push_back(cur_job_Q3);
+          Q3_has_job_to_continue = false;
+        } else if(cur_job_Q3.interactivity.count(cur_job_Q3.amount_run)){                                   // job relieves CPU now
+          if(q3_relieving_jobs[cur_job_Q3.interactivity[cur_job_Q3.amount_run] + timer].size() == 0){
+            queue<Process> val;
+            val.push(cur_job_Q3);
+            q3_relieving_jobs[cur_job_Q3.interactivity[cur_job_Q3.amount_run] + timer] = val;
+          } else{
+            q3_relieving_jobs[cur_job_Q3.interactivity[cur_job_Q3.amount_run] + timer].push(cur_job_Q3);
+          }
+          Q3_has_job_to_continue = false;
+        } else if(cur_job_Q3.duration != 0 && cur_job_Q3.time_allotment_at_level == 0){                   // job not complete, but used up timeslot
+          cur_job_Q3.time_allotment_at_level = q4_timeslot;
+          q4.push(cur_job_Q3);
+          Q3_has_job_to_continue = false;
+        } else if(cur_job_Q3.duration != 0 && cur_job_Q3.time_allotment_at_level != 0){                  // job not complete, but did not use up timeslot
+          Q3_has_job_to_continue = true;
+        }
+}
+
+// Helper function for MLFQ scheduling function, Q4
+// Supports one iteration of SJF 
+void sjf_iteration_pqueue_duration(pqueue_duration &q4, bool &Q4_has_job_to_continue, Process &cur_job_Q4, map<int, queue<Process>> &q4_relieving_jobs, int &timer, list<Process> &complete){
+    // Get top process in queue to run
+      if(!Q4_has_job_to_continue){
+        cur_job_Q4 = q4.top();
+        q4.pop();
+      }
+      
+      // Set first_run if applicable
+      if(cur_job_Q4.first_run == -1){
+        cur_job_Q4.first_run = timer;
+      }
+
+      // Update timer, time allotment at level, duration and amount_run
+      timer++;
+      cur_job_Q4.time_allotment_at_level -= 1;
+      cur_job_Q4.duration -= 1;
+      cur_job_Q4.amount_run++;
+
+      // Check if job finished / used up time slot / relieves CPU
+      if(cur_job_Q4.duration == 0){                                                                       // job finished
+        cur_job_Q4.completion = timer;
+        complete.push_back(cur_job_Q4);
+        Q4_has_job_to_continue = false;
+      } else if(cur_job_Q4.interactivity.count(cur_job_Q4.amount_run)){                                   // job relieves CPU now
+        if(q4_relieving_jobs[cur_job_Q4.interactivity[cur_job_Q4.amount_run] + timer].size() == 0){
+          queue<Process> val;
+          val.push(cur_job_Q4);
+          q4_relieving_jobs[cur_job_Q4.interactivity[cur_job_Q4.amount_run] + timer] = val;
+        } else{
+          q4_relieving_jobs[cur_job_Q4.interactivity[cur_job_Q4.amount_run] + timer].push(cur_job_Q4);
+        }
+        Q4_has_job_to_continue = false;
+      } else if(cur_job_Q4.duration != 0){                                                                // job not complete
+        Q4_has_job_to_continue = true;
+      }
+}
+
 // Helper function for MLFQ scheduling function
 // Supports boosting jobs from Q2 to Q1 
 void boost_from_lower_deque(deque<Process> &lowerq, deque<Process> &higherq, int higherq_timeslot){
@@ -403,79 +485,9 @@ list<Process> mlfq(pqueue_arrival workload) {           // scheduling with Multi
     } else if(q2.size() != 0){                                                                              // If Q2 not empty, run a job from Q2 with RR
       rr_iteration_deque_to_pqueue_duration(q2, q2_relieving_jobs, q3, q3_timeslot, timer, complete);
     } else if(q3.size() != 0 || Q3_has_job_to_continue){                                                 // If Q3 not empty, run a job from Q3 with SJF
-      // 3a. Get top process in queue to run
-      if(!Q3_has_job_to_continue){
-        cur_job_Q3 = q3.top();
-        q3.pop();
-      }
-
-      // 3b. Set first_run if applicable
-      if(cur_job_Q3.first_run == -1){
-        cur_job_Q3.first_run = timer;
-      }
-
-      // 3c. Update timer, time allotment at level, duration and amount_run
-      timer++;
-      cur_job_Q3.time_allotment_at_level -= 1;
-      cur_job_Q3.duration -= 1;
-      cur_job_Q3.amount_run++;
-
-      // 3d. Check if job finished / used up time slot / relieves CPU
-      if(cur_job_Q3.duration == 0){                                                                       // job finished
-        cur_job_Q3.completion = timer;
-        complete.push_back(cur_job_Q3);
-        Q3_has_job_to_continue = false;
-      } else if(cur_job_Q3.interactivity.count(cur_job_Q3.amount_run)){                                   // job relieves CPU now
-        if(q3_relieving_jobs[cur_job_Q3.interactivity[cur_job_Q3.amount_run] + timer].size() == 0){
-          queue<Process> val;
-          val.push(cur_job_Q3);
-          q3_relieving_jobs[cur_job_Q3.interactivity[cur_job_Q3.amount_run] + timer] = val;
-        } else{
-          q3_relieving_jobs[cur_job_Q3.interactivity[cur_job_Q3.amount_run] + timer].push(cur_job_Q3);
-        }
-        Q3_has_job_to_continue = false;
-      } else if(cur_job_Q3.duration != 0 && cur_job_Q3.time_allotment_at_level == 0){                   // job not complete, but used up timeslot
-        cur_job_Q3.time_allotment_at_level = q4_timeslot;
-        q4.push(cur_job_Q3);
-        Q3_has_job_to_continue = false;
-      } else if(cur_job_Q3.duration != 0 && cur_job_Q3.time_allotment_at_level != 0){                  // job not complete, but did not use up timeslot
-        Q3_has_job_to_continue = true;
-      }
-    } else if(q4.size() != 0 || Q4_has_job_to_continue){
-      // 3a. Get top process in queue to run
-      if(!Q4_has_job_to_continue){
-        cur_job_Q4 = q4.top();
-        q4.pop();
-      }
-      
-      // 3b. Set first_run if applicable
-      if(cur_job_Q4.first_run == -1){
-        cur_job_Q4.first_run = timer;
-      }
-
-      // 3c. Update timer, time allotment at level, duration and amount_run
-      timer++;
-      cur_job_Q4.time_allotment_at_level -= 1;
-      cur_job_Q4.duration -= 1;
-      cur_job_Q4.amount_run++;
-
-      // 3d. Check if job finished / used up time slot / relieves CPU
-      if(cur_job_Q4.duration == 0){                                                                       // job finished
-        cur_job_Q4.completion = timer;
-        complete.push_back(cur_job_Q4);
-        Q4_has_job_to_continue = false;
-      } else if(cur_job_Q4.interactivity.count(cur_job_Q4.amount_run)){                                   // job relieves CPU now
-        if(q4_relieving_jobs[cur_job_Q4.interactivity[cur_job_Q4.amount_run] + timer].size() == 0){
-          queue<Process> val;
-          val.push(cur_job_Q4);
-          q4_relieving_jobs[cur_job_Q4.interactivity[cur_job_Q4.amount_run] + timer] = val;
-        } else{
-          q4_relieving_jobs[cur_job_Q4.interactivity[cur_job_Q4.amount_run] + timer].push(cur_job_Q4);
-        }
-        Q4_has_job_to_continue = false;
-      } else if(cur_job_Q4.duration != 0){                                                                // job not complete
-        Q4_has_job_to_continue = true;
-      }
+      sjf_iteration_pqueue_duration_to_pqueue_duration(q3, q4, Q3_has_job_to_continue, cur_job_Q3, q3_relieving_jobs, timer, complete, q4_timeslot);
+    } else if(q4.size() != 0 || Q4_has_job_to_continue){                                                    // If Q4 not empty, run a job from Q4 with SJF
+      sjf_iteration_pqueue_duration(q4, Q4_has_job_to_continue, cur_job_Q4, q4_relieving_jobs, timer, complete); 
     } else{                                   // If no jobs to run on all level queues, increment timer
       timer++;
     }
