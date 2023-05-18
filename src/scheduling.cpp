@@ -516,6 +516,7 @@ list<Process> mlfq(pqueue_arrival workload) {           // scheduling with Multi
   return complete;                        // Return list of completed processes ordered by completion time
 }
 
+/* ------------------------------------------------------ END OF MLFQ IMPLEMENTATION -------------------------------------------*/
 
 float avg_turnaround(list<Process> processes) {     // return avg turnaround time given list of completed processes
   int sum = 0;
